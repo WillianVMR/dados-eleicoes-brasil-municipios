@@ -8,19 +8,20 @@ from geopy.extra.rate_limiter import RateLimiter
 conn = sqlite3.connect('geolocalizacao_sp.sqlite3')
 cursor = conn.cursor()
 
-# Initialize the geocoder with rate limiter to respect usage limits
-geolocator = Nominatim(user_agent="geoapiExercises")
-geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
+# Initialize the geocoder with a custom timeout (e.g., 10 seconds)
+geolocator = Nominatim(user_agent="geoapiExercises", timeout=10)
 
-# Function to geocode address
+# Adjust the rate limiter to wait longer between requests, e.g., 2 seconds between requests
+geocode = RateLimiter(geolocator.geocode, min_delay_seconds=2, error_wait_seconds=10, max_retries=2, swallow_exceptions=False)
+
 def geocode_address(address):
     try:
         location = geocode(address)
         if location:
             return location.latitude, location.longitude
-    except:
+    except Exception as e:
+        print(f"Error geocoding {address}: {e}")
         return None, None
-    return None, None
 
 # Flag to control the updating process
 stop_requested = False
@@ -28,7 +29,7 @@ stop_requested = False
 def check_for_stop():
     global stop_requested
     while not stop_requested:
-        user_input = input()
+        user_input = input('Digite "stop" para encerrar:\n')
         if user_input == 'stop':
             stop_requested = True
             print("Stop requested. Finishing up...")
