@@ -9,7 +9,7 @@ conn = sqlite3.connect('geolocalizacao_sp.sqlite3')
 cursor = conn.cursor()
 
 # Initialize the geocoder with a custom timeout (e.g., 10 seconds)
-geolocator = Nominatim(user_agent="geoapiExercises", timeout=10)
+geolocator = Nominatim(user_agent="AddressOfElectionGeocode", timeout=10)
 
 # Adjust the rate limiter to wait longer between requests, e.g., 2 seconds between requests
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=2, error_wait_seconds=10, max_retries=2, swallow_exceptions=False)
@@ -19,9 +19,12 @@ def geocode_address(address):
         location = geocode(address)
         if location:
             return location.latitude, location.longitude
+        else:
+            return None, None  # Ensure a tuple is returned even if the location is not found
     except Exception as e:
         print(f"Error geocoding {address}: {e}")
-        return None, None
+        return None, None  # Ensure a tuple is returned in case of an exception
+
 
 # Flag to control the updating process
 stop_requested = False
@@ -51,13 +54,16 @@ def update_rows():
             break
         rowid, address = row
         latitude, longitude = geocode_address(address)
-        if latitude and longitude:
+        if latitude is not None and longitude is not None:  # Check if latitude and longitude are not None
             cursor.execute("UPDATE dataset_capital SET NEW_NR_LATITUDE = ?, NEW_NR_LONGITUDE = ?, GEOCODED = 1 WHERE rowid = ?", (latitude, longitude, rowid))
             conn.commit()
             rows_updated += 1
             print(f"Updated row {rowid}. {rows_updated}/{total_rows} ({(rows_updated/total_rows)*100:.2f}%)")
-    
+        else:
+            print(f"Geocoding failed for address: {address}")
+
     print(f"Total rows updated: {rows_updated}/{total_rows} ({(rows_updated/total_rows)*100:.2f}%)")
+
 
 # Call the update function
 update_rows()
