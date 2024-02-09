@@ -44,6 +44,7 @@ stop_thread.start()
 # Function to update rows
 def update_rows():
     rows_updated = 0
+    rows_failed = 0  # Track failed geocoding attempts
     total_rows = cursor.execute("SELECT COUNT(*) FROM dataset_capital WHERE GEOCODED = 0").fetchone()[0]
     if total_rows == 0:
         print("All rows have already been geocoded.")
@@ -54,15 +55,20 @@ def update_rows():
             break
         rowid, address = row
         latitude, longitude = geocode_address(address)
-        if latitude is not None and longitude is not None:  # Check if latitude and longitude are not None
+        if latitude is not None and longitude is not None:
             cursor.execute("UPDATE dataset_capital SET NEW_NR_LATITUDE = ?, NEW_NR_LONGITUDE = ?, GEOCODED = 1 WHERE rowid = ?", (latitude, longitude, rowid))
             conn.commit()
             rows_updated += 1
             print(f"Updated row {rowid}. {rows_updated}/{total_rows} ({(rows_updated/total_rows)*100:.2f}%)")
-        else:
-            print(f"Geocoding failed for address: {address}")
+        else:  # Geocoding failed, update GEOCODED to 3
+            cursor.execute("UPDATE dataset_capital SET GEOCODED = 3 WHERE rowid = ?", (rowid,))
+            conn.commit()
+            rows_failed += 1
+            print(f"Geocoding failed for address: {address}. Marked as failed.")
 
-    print(f"Total rows updated: {rows_updated}/{total_rows} ({(rows_updated/total_rows)*100:.2f}%)")
+    print(f"Total rows updated: {rows_updated}/{total_rows} ({(rows_updated/total_rows)*100:.2f}%).")
+    if rows_failed > 0:
+        print(f"Rows marked as failed: {rows_failed}.")
 
 
 # Call the update function
