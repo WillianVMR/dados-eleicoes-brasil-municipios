@@ -12,7 +12,7 @@ cursor = conn.cursor()
 geolocator = Nominatim(user_agent="AddressOfElectionGeocode", timeout=10)
 
 # Adjust the rate limiter to wait longer between requests, e.g., 2 seconds between requests
-geocode = RateLimiter(geolocator.geocode, min_delay_seconds=2, error_wait_seconds=10, max_retries=2, swallow_exceptions=False)
+geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1, error_wait_seconds=10, max_retries=2, swallow_exceptions=False)
 
 def geocode_address(address):
     try:
